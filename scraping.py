@@ -5,6 +5,7 @@ from bs4 import BeautifulSoup as soup
 from webdriver_manager.chrome import ChromeDriverManager
 import pandas as pd
 import datetime as dt
+import traceback
 
 def scrape_all():
     # Initiate headless driver for deployment
@@ -32,9 +33,6 @@ def mars_news(browser):
     browser.visit(url)
     browser.is_element_present_by_css('div.list_text', wait_time=1)
 
-
-
-
     html = browser.html
     news_soup = soup(html, 'html.parser')
     
@@ -46,7 +44,8 @@ def mars_news(browser):
         #begin scraping titles
         news_p = slide_elem.find('div', class_='article_teaser_body').get_text()
     
-    except AttributeError:
+    except AttributeError as e:
+        print(e)
         return None, None
 
     return news_title, news_p
@@ -54,13 +53,14 @@ def mars_news(browser):
 
 
 def featured_image(browser):
+    print("Finding featured image")
     #visit url
     url = 'https://data-class-jpl-space.s3.amazonaws.com/JPL_Space/index.html'
     browser.visit(url)
 
 
     # Find and click the full image button
-    full_image_elem = browser.find_by_tag('button')[1]
+    full_image_elem = browser.find_by_css('button.btn-outline-light')
     full_image_elem.click()
 
 
@@ -69,11 +69,16 @@ def featured_image(browser):
     img_soup = soup(html, 'html.parser')
     
     try:
+        if browser.is_element_present_by_css('img.fancbox-image', wait_time=3):
+            print("here it is")
+        else:
+            print("not here at all")
+
         # Find the relative image url
         img_url_rel = img_soup.find('img', class_='fancybox-image').get('src')
     
-    except AttributeError as e:
-        print(e)
+    except AttributeError:
+        print(traceback.format_exc())
         return None
 
     # Use the base URL to create an absolute URL

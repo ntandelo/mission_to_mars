@@ -7,11 +7,13 @@ import pandas as pd
 import datetime as dt
 import traceback
 
+executable_path = {'executable_path': ChromeDriverManager().install()}
+
 def scrape_all():
     # Initiate headless driver for deployment
-    executable_path = {'executable_path': ChromeDriverManager().install()}
     browser = Browser('chrome', **executable_path, headless=True)
     news_title, news_paragraph = mars_news(browser)
+    hemisphere_image_urls = hemi_scrape(browser)
 
     # Run all scraping functions and store results in dictionary
     data = {
@@ -19,9 +21,9 @@ def scrape_all():
         "news_paragraph": news_paragraph,
         "featured_image": featured_image(browser),
         "facts": mars_facts(),
-        "last_modified": dt.datetime.now()
+        "last_modified": dt.datetime.now(),
+        "hemisphere_image_urls": hemisphere_image_urls
     }
-
     browser.quit()
     return data
 
@@ -98,6 +100,36 @@ def mars_facts():
 
 
     return df.to_html(classes ="table table-striped")
+
+def hemi_scrape(browser):
+    url = 'https://marshemispheres.com/'
+
+    browser.visit(url)
+
+    subbrowser = Browser('chrome', **executable_path, headless=False)
+
+    hemisphere_image_urls = []
+
+    for link in browser.links.find_by_partial_text('Hemisphere Enhanced'):
+        # link.click()
+        
+        subbrowser.visit(link._element.get_attribute("href"))
+        html = subbrowser.html
+        mars_soup = soup(html, 'html.parser')
+        allinks = mars_soup.find_all("a", target="_blank")
+        title = mars_soup.find("h2", class_='title').text
+
+        imgurl = "https://marshemispheres.com/" + allinks[2].get('href')
+        print("For page=", link._element.get_attribute("href"), " link=", imgurl, "title= ", title)
+        # browser.back()
+        
+        hemisphere_image_urls.append({"img_url": imgurl, "title": title})
+
+    subbrowser.quit()
+    return hemisphere_image_urls
+
+
+  
 
 if __name__ == "__main__":
     print(scrape_all())
